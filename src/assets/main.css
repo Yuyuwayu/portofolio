@@ -1,0 +1,46 @@
+@import "tailwindcss";
+/* Definisi variabel untuk tema terang (default) */
+:root {
+  --background: #f8fafc; /* slate-50 */
+  --surface: rgba(255, 255, 255, 0.6); /* white/60 */
+  --text-primary: #0f172a; /* slate-900 */
+  --text-secondary: #475569; /* slate-600 */
+  --accent: #0ea5e9; /* sky-500 */
+  --accent-hover: #0284c7; /* sky-600 */
+  --card-border: #e2e8f0; /* slate-200 */
+  --chip-bg: #e0f2fe; /* sky-100 */
+  --chip-text: #0369a1; /* sky-700 */
+}
+
+/* Override variabel saat mode gelap aktif */
+.dark {
+  --background: #020617; /* slate-950 */
+  --surface: rgba(15, 23, 42, 0.5); /* slate-900/50 */
+  --text-primary: #f8fafc; /* slate-50 */
+  --text-secondary: #94a3b8; /* slate-400 */
+  --accent: #38bdf8; /* sky-400 */
+  --accent-hover: #0ea5e9; /* sky-500 */
+  --card-border: #1e293b; /* slate-800 */
+  --chip-bg: #1e293b; /* slate-800 */
+  --chip-text: #7dd3fc; /* sky-300 */
+}
+
+/* Atur warna dasar body */
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Animasi untuk elemen yang muncul saat di-scroll */
+.scroll-target {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  transition-delay: 0.2s;
+}
+
+.scroll-target.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
