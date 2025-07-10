@@ -33,15 +33,13 @@ const projects = ref([
     description: 'Sistem monitoring berbasis web menggunakan ESP32 sebagai mikrokontroler, dengan Vue.js untuk front-end dan Fastapi untuk back-end.',
     imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Proyek+IoT',
     technologies: ['Vue.js', 'FastAPI', 'Python', 'ESP32'],
-    liveUrl: '#',
-    sourceUrl: '#'
+    sourceUrl: 'https://github.com/Yuyuwayu/web-capstone'
   },
   {
     title: 'Dashboard Admin Sederhana',
     description: 'Membuat dashboard admin yang fungsional dan responsif untuk manajemen data menggunakan CodeIgniter 4.',
     imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Dashboard+Admin',
     technologies: ['CodeIgniter 4', 'PHP', 'Bootstrap', 'MySQL'],
-    liveUrl: '#',
     sourceUrl: '#'
   },
   {
@@ -49,7 +47,6 @@ const projects = ref([
     description: 'Mendesain dan membangun landing page yang menarik dan responsif dari awal menggunakan HTML dan CSS murni.',
     imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Landing+Page',
     technologies: ['HTML', 'CSS', 'Responsive Design'],
-    liveUrl: '#',
     sourceUrl: '#'
   }
 ]);
@@ -65,8 +62,8 @@ const skills = ref([
 ]);
 
 const socialLinks = ref([
-  { name: 'GitHub', component: Github, url: '#' },
-  { name: 'LinkedIn', component: Linkedin, url: '#' }
+  { name: 'GitHub', component: Github, url: 'https://github.com/Yuyuwayu' },
+  { name: 'LinkedIn', component: Linkedin, url: 'https://www.linkedin.com/in/nanda-willy-atmaja-6b916333b/' }
 ]);
 
 const particleOptions = computed(() => ({
@@ -207,9 +204,6 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="mt-auto pt-6 flex justify-end gap-4">
-                <a :href="project.liveUrl" target="_blank" class="text-secondary hover:text-accent transition-colors duration-300 flex items-center gap-2">
-                  <ExternalLink class="w-4 h-4" /> Live Demo
-                </a>
                 <a :href="project.sourceUrl" target="_blank" class="text-secondary hover:text-accent transition-colors duration-300 flex items-center gap-2">
                   <Github class="w-4 h-4" /> Kode
                 </a>
