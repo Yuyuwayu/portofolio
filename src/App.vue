@@ -24,7 +24,7 @@ const personalInfo = ref({
   sapaan: 'Halo, saya',
   bio: 'Seorang mahasiswa dari Universitas Negeri Semarang yang bersemangat dalam dunia pengembangan web. Saya memiliki minat kuat pada pengembangan back-end dan front-end, dan selalu antusias untuk belajar teknologi baru serta berkontribusi dalam proyek-proyek yang menantang.',
   email: 'Justturtle30@students.unnes.ac.id',
-  cvUrl: '#'
+  cvUrl: 'https://drive.google.com/file/d/1LbcVmTRIcsnJLWUIXpECe6zi2pdWYbG3/view?usp=drive_link'
 });
 
 const projects = ref([
@@ -32,22 +32,36 @@ const projects = ref([
     title: 'Web Monitoring IoT',
     description: 'Sistem monitoring berbasis web menggunakan ESP32 sebagai mikrokontroler, dengan Vue.js untuk front-end dan Fastapi untuk back-end.',
     imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Proyek+IoT',
-    technologies: ['Vue.js', 'FastAPI', 'Python', 'ESP32'],
+    technologies: ['Vue.js', 'Python', 'ESP32'],
     sourceUrl: 'https://github.com/Yuyuwayu/web-capstone'
   },
   {
-    title: 'Dashboard Admin Sederhana',
-    description: 'Membuat dashboard admin yang fungsional dan responsif untuk manajemen data menggunakan CodeIgniter 4.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Dashboard+Admin',
-    technologies: ['CodeIgniter 4', 'PHP', 'Bootstrap', 'MySQL'],
-    sourceUrl: '#'
+    title: 'Web Profil Desa',
+    description: 'Membuat Template Web Profil Desa dengan data dummy menggunakan Vue 3 dan Tailwind.',
+    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Web+Profil+Desa',
+    technologies: ['Vue 3', 'Tailwind'],
+    sourceUrl: 'https://github.com/Yuyuwayu/selokarto'
+  },
+  {
+    title: 'Deteksi Ikan',
+    description: 'Membuat Prototipe Model Yolo untuk mendeteksi Ikan.',
+    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Deteksi+Ikan',
+    technologies: ['Python', 'FastApi', 'Yolo'],
+    sourceUrl: 'https://github.com/Yuyuwayu/capstone-yolo'
+  },
+  {
+    title: 'Analisis Segmentasi Pelanggan dengan Clustering dan Klasifikasi',
+    description: 'Melakukan segmentasi pelanggan menggunakan K-Means Clustering, menghasilkan 4 segmen.',
+    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Clustering+dan+Klasifikasi',
+    technologies: ['Python'],
+    sourceUrl: 'https://github.com/Yuyuwayu/machine-learning'
   },
   {
     title: 'Desain Landing Page',
     description: 'Mendesain dan membangun landing page yang menarik dan responsif dari awal menggunakan HTML dan CSS murni.',
     imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Landing+Page',
     technologies: ['HTML', 'CSS', 'Responsive Design'],
-    sourceUrl: '#'
+    sourceUrl: 'https://github.com/Yuyuwayu/Belajar'
   }
 ]);
 
