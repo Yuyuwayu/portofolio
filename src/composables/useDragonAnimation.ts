@@ -38,6 +38,7 @@ class DragonController {
   private speed = 0;
   private travelPhase = 0;
   private motionAmount = 0;
+  private reducedMotion = false;
   private hasMoved = false;
   private isTracking = false;
   private isDark: boolean;
@@ -62,6 +63,10 @@ class DragonController {
 
   setDarkMode(isDark: boolean) {
     this.isDark = isDark;
+  }
+
+  setReducedMotion(reducedMotion: boolean) {
+    this.reducedMotion = reducedMotion;
   }
 
   setSafeRect(rect: Rect | null) {
@@ -126,8 +131,8 @@ class DragonController {
   }
 
   update(dt: number) {
-    const acceleration = 175 * this.scale;
-    const deceleration = 225 * this.scale;
+    const acceleration = (this.reducedMotion ? 115 : 175) * this.scale;
+    const deceleration = (this.reducedMotion ? 185 : 225) * this.scale;
     let desiredSpeed = 0;
     let headingError = 0;
 
@@ -147,11 +152,13 @@ class DragonController {
       if (distance > 0.01) {
         const desiredAngle = Math.atan2(dy, dx);
         headingError = this.wrapAngle(desiredAngle - this.angle);
-        const turnLimit = 2.05 * dt;
+        const turnLimit = (this.reducedMotion ? 1.45 : 2.05) * dt;
         this.angle += Math.max(-turnLimit, Math.min(turnLimit, headingError));
         const turnFactor = 0.48 + 0.52 * (1 - Math.min(Math.abs(headingError) / Math.PI, 1));
         const brakingSpeed = Math.sqrt(2 * deceleration * distance);
-        desiredSpeed = Math.min(this.maxSpeed, distance * 2.25, brakingSpeed) * turnFactor;
+        const speedScale = this.reducedMotion ? 0.62 : 1;
+        const approachRate = this.reducedMotion ? 1.7 : 2.25;
+        desiredSpeed = Math.min(this.maxSpeed * speedScale, distance * approachRate, brakingSpeed) * turnFactor;
       }
     }
 
@@ -173,7 +180,8 @@ class DragonController {
     }
 
     const desiredMotion = Math.min(1, this.speed / (46 * this.scale));
-    const settle = 1 - Math.exp(-dt * 4.2);
+    const settleRate = this.reducedMotion ? 2.8 : 4.2;
+    const settle = 1 - Math.exp(-dt * settleRate);
     this.motionAmount += (desiredMotion - this.motionAmount) * settle;
     this.sampleBody();
   }
@@ -263,7 +271,8 @@ class DragonController {
       let x = this.point.x;
       let y = this.point.y;
 
-      const waveAmplitude = 2.8 * this.scale * this.motionAmount * (0.28 + 0.72 * i / (this.stationCount - 1));
+      const swayScale = this.reducedMotion ? 0.24 : 1;
+      const waveAmplitude = 2.8 * this.scale * this.motionAmount * swayScale * (0.28 + 0.72 * i / (this.stationCount - 1));
       const wave = Math.sin(this.travelPhase - distance * 0.055) * waveAmplitude;
 
       this.sampleTrail(Math.max(0, distance - this.pointSpacing * 2), this.point);
@@ -368,7 +377,7 @@ class DragonController {
       const side = leg % 2 === 0 ? -1 : 1;
       const index = leg < 2 ? front : rear;
       const phase = this.travelPhase * 1.35 + (leg === 1 || leg === 2 ? Math.PI : 0);
-      const stride = Math.sin(phase) * 3.3 * this.scale * this.motionAmount;
+      const stride = this.reducedMotion ? 0 : Math.sin(phase) * 3.3 * this.scale * this.motionAmount;
       const radius = this.bodyRadius[index];
 
       ctx.save();
@@ -521,8 +530,6 @@ export function useDragonAnimation(
   let reducedMotionQuery: MediaQueryList | null = null;
   let onCapabilityChange: (() => void) | null = null;
 
-  const motionAllowed = () => import.meta.env.DEV || !reducedMotionQuery?.matches;
-
   const updateSafeZone = () => {
     if (!controller || !hero) return;
     const safeElement = getSafeZone();
@@ -559,7 +566,7 @@ export function useDragonAnimation(
 
   const animate = (time: number) => {
     frame = 0;
-    if (!enabled || !inViewport || !controller || !context || document.hidden || !motionAllowed()) return;
+    if (!enabled || !inViewport || !controller || !context || document.hidden) return;
     const dt = lastTime ? Math.min(0.032, (time - lastTime) / 1000) : 1 / 60;
     lastTime = time;
     controller.update(dt);
@@ -569,7 +576,7 @@ export function useDragonAnimation(
   };
 
   const wake = () => {
-    if (!frame && enabled && inViewport && !document.hidden && motionAllowed()) frame = requestAnimationFrame(animate);
+    if (!frame && enabled && inViewport && !document.hidden) frame = requestAnimationFrame(animate);
   };
 
   const resize = () => {
@@ -587,6 +594,7 @@ export function useDragonAnimation(
       canvas.height = pixelHeight;
       context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       controller = new DragonController(width, height, getDarkMode());
+      controller.setReducedMotion(reducedMotionQuery?.matches ?? false);
       updateSafeZone();
       drawOnce();
     } else if (controller) {
@@ -597,7 +605,7 @@ export function useDragonAnimation(
   };
 
   const onPointerMove = (event: PointerEvent) => {
-    if (!enabled || !controller || !motionAllowed() || event.pointerType === 'touch' || !canvasRef.value) return;
+    if (!enabled || !controller || event.pointerType === 'touch' || !canvasRef.value) return;
     const bounds = canvasRef.value.getBoundingClientRect();
     controller.setTarget(event.clientX - bounds.left, event.clientY - bounds.top);
     wake();
@@ -652,13 +660,8 @@ export function useDragonAnimation(
     reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     onCapabilityChange = () => {
       setEnabled(capabilityQuery!.matches);
-      if (!motionAllowed()) {
-        controller?.clearTarget();
-        stopFrame();
-        drawOnce();
-      } else {
-        wake();
-      }
+      controller?.setReducedMotion(reducedMotionQuery!.matches);
+      wake();
     };
     capabilityQuery.addEventListener('change', onCapabilityChange);
     reducedMotionQuery.addEventListener('change', onCapabilityChange);
