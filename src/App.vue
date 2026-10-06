@@ -29,11 +29,10 @@ const personalInfo = ref({
 
 const projects = ref([
   {
-    title: 'Web Monitoring IoT',
-    description: 'Sistem monitoring berbasis web menggunakan ESP32 sebagai mikrokontroler, dengan Vue.js untuk front-end dan Fastapi untuk back-end.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Proyek+IoT',
-    technologies: ['Vue.js', 'Python', 'ESP32'],
-    sourceUrl: 'https://github.com/Yuyuwayu/web-capstone'
+    title: 'MyShuttle UNNES',
+    description: 'Full-stack campus shuttle monitoring system for tracking shuttle routes, shuttle locations, nearby stops, and passenger occupancy. Laravel powers the full application, while Python runs a custom-trained YOLOv8n model for passenger detection.',
+    imageUrl: '/myshuttle-unnes.webp',
+    technologies: ['Laravel', 'Python', 'YOLOv8n', 'Leaflet']
   },
   {
     title: 'Web Profil Desa',
@@ -217,7 +216,7 @@ onMounted(async () => {
                   <span v-for="tech in project.technologies" class="bg-chip-bg text-chip-text text-xs font-semibold px-2.5 py-1 rounded-full">{{ tech }}</span>
                 </div>
               </div>
-              <div class="mt-auto pt-6 flex justify-end gap-4">
+              <div v-if="project.sourceUrl" class="mt-auto pt-6 flex justify-end gap-4">
                 <a :href="project.sourceUrl" target="_blank" class="text-secondary hover:text-accent transition-colors duration-300 flex items-center gap-2">
                   <Github class="w-4 h-4" /> Kode
                 </a>
