@@ -3,8 +3,10 @@ import { ref, onMounted, computed, watchEffect, watch } from 'vue';
 import { tsParticles } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
 import { Github, Linkedin, Twitter, ExternalLink, Heart, Sun, Moon } from 'lucide-vue-next';
+import DragonCanvas from './components/DragonCanvas.vue';
 
 const particlesContainer = ref(null);
+const heroCopy = ref(null);
 const isDarkMode = ref(true);
 
 watchEffect(() => {
@@ -176,14 +178,16 @@ onMounted(async () => {
   <div class="relative z-10 text-secondary">
     <main class="container mx-auto px-6 py-12 md:py-20">
 
-      <section id="home" class="min-h-[80vh] flex items-center scroll-target">
-        <div class="absolute top-6 right-6">
-          <button @click="isDarkMode = !isDarkMode" class="p-2 rounded-full bg-surface/80 backdrop-blur-sm transition-colors duration-300 border border-card-border">
-            <Sun v-if="isDarkMode" class="w-6 h-6 text-yellow-500" />
-            <Moon v-else class="w-6 h-6 text-indigo-700" />
-          </button>
-        </div>
-        <div class="max-w-3xl">
+      <div class="absolute top-6 right-6 z-20">
+        <button @click="isDarkMode = !isDarkMode" class="p-2 rounded-full bg-surface/80 backdrop-blur-sm transition-colors duration-300 border border-card-border">
+          <Sun v-if="isDarkMode" class="w-6 h-6 text-yellow-500" />
+          <Moon v-else class="w-6 h-6 text-indigo-700" />
+        </button>
+      </div>
+
+      <section id="home" class="relative isolate min-h-[80vh] flex items-center scroll-target">
+        <DragonCanvas :dark="isDarkMode" :safe-zone="heroCopy" />
+        <div ref="heroCopy" class="relative z-10 max-w-3xl">
           <div class="text-2xl font-bold text-primary tracking-wider mb-8">
             {{ personalInfo.nama.split(' ')[0] }}<span class="text-accent">.</span>
           </div>
