@@ -1,5 +1,6 @@
 import { onBeforeUnmount, onMounted, watch, type Ref } from 'vue';
 import { DragonParticleInteraction, type DragonInteractionFrame } from './useDragonParticleInteraction';
+import { DragonProceduralRenderer } from './dragonProceduralRenderer';
 
 type Rect = { left: number; top: number; right: number; bottom: number };
 
@@ -27,10 +28,6 @@ class DragonController {
     bodySpacing: 1,
     hasMoved: false,
   };
-  private readonly leftX = new Float32Array(MAX_BODY_POINTS);
-  private readonly leftY = new Float32Array(MAX_BODY_POINTS);
-  private readonly rightX = new Float32Array(MAX_BODY_POINTS);
-  private readonly rightY = new Float32Array(MAX_BODY_POINTS);
   private readonly point = { x: 0, y: 0 };
   private readonly routeX = new Float32Array(3);
   private readonly routeY = new Float32Array(3);
@@ -54,9 +51,13 @@ class DragonController {
   private speed = 0;
   private travelPhase = 0;
   private motionAmount = 0;
+  private wingPhase = 0;
   private hasMoved = false;
   private isTracking = false;
   private isDark: boolean;
+
+  // Pure Canvas visual layer; the controller remains the simulation source.
+  private readonly renderer = new DragonProceduralRenderer();
 
   x: number;
   y: number;
@@ -206,6 +207,8 @@ class DragonController {
     const desiredMotion = Math.min(1, this.speed / (46 * this.scale));
     const settle = 1 - Math.exp(-dt * 4.2);
     this.motionAmount += (desiredMotion - this.motionAmount) * settle;
+    // The wing clock follows flight energy, then naturally settles at rest.
+    this.wingPhase += dt * (0.55 + this.motionAmount * 3.1);
     this.sampleBody();
   }
 
@@ -216,33 +219,19 @@ class DragonController {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    const fill = this.isDark ? 'rgba(18, 35, 55, 0.96)' : 'rgba(34, 61, 88, 0.44)';
-    const shadow = this.isDark ? 'rgba(9, 20, 34, 0.96)' : 'rgba(25, 47, 69, 0.42)';
-    const edge = this.isDark ? 'rgba(105, 143, 177, 0.68)' : 'rgba(45, 88, 130, 0.56)';
-    const detail = this.isDark ? 'rgba(137, 174, 199, 0.58)' : 'rgba(42, 105, 150, 0.46)';
-    const bodyPlane = this.isDark ? 'rgba(38, 58, 80, 0.66)' : 'rgba(69, 98, 126, 0.34)';
-    const shoulderPlane = this.isDark ? 'rgba(51, 71, 94, 0.48)' : 'rgba(78, 106, 133, 0.28)';
-    const membrane = this.isDark ? 'rgba(45, 64, 86, 0.9)' : 'rgba(70, 103, 136, 0.42)';
-    const membraneEdge = this.isDark ? 'rgba(123, 157, 184, 0.7)' : 'rgba(45, 88, 130, 0.5)';
-
-    ctx.save();
-    if (this.width >= 1024) {
-      const renderScale = 1.27;
-      ctx.translate(this.x, this.y);
-      ctx.scale(renderScale, renderScale);
-      ctx.translate(-this.x, -this.y);
-    }
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    this.drawLegs(ctx, shadow, edge, detail);
-    this.drawWings(ctx, membrane, membraneEdge, detail);
-    this.drawBody(ctx, fill, edge);
-    this.drawBodyLayers(ctx, bodyPlane, shoulderPlane, edge);
-    this.drawTailFin(ctx, membrane, membraneEdge, detail);
-    this.drawHead(ctx, fill, edge, detail);
-
-    ctx.restore();
+    this.renderer.draw(ctx, {
+      x: this.x,
+      y: this.y,
+      heading: this.angle,
+      scale: this.scale,
+      viewportWidth: this.width,
+      bodyX: this.bodyX,
+      bodyY: this.bodyY,
+      stationCount: this.stationCount,
+      motionAmount: this.motionAmount,
+      wingPhase: this.wingPhase,
+      isDark: this.isDark,
+    });
   }
 
   private seedHistory() {
@@ -323,10 +312,6 @@ class DragonController {
       this.bodyY[i] = y;
       this.bodyAngle[i] = Math.atan2(tangentY, tangentX);
       this.bodyRadius[i] = this.radiusAt(distance);
-      this.leftX[i] = x - tangentY * this.bodyRadius[i];
-      this.leftY[i] = y + tangentX * this.bodyRadius[i];
-      this.rightX[i] = x + tangentY * this.bodyRadius[i];
-      this.rightY[i] = y - tangentX * this.bodyRadius[i];
     }
   }
 
@@ -355,349 +340,6 @@ class DragonController {
 
     const t = Math.min(1, (distance - torsoEnd) / Math.max(1, tailEnd - torsoEnd));
     return Math.max(0.06, 12 * Math.pow(1 - t, 1.12)) * this.scale;
-  }
-
-  private drawBody(ctx: CanvasRenderingContext2D, fill: string, edge: string) {
-    const last = this.stationCount - 1;
-    ctx.beginPath();
-    const firstOffset = this.tailVisualOffset(0);
-    let previousLeftX = this.leftX[0] - Math.sin(this.bodyAngle[0]) * firstOffset;
-    let previousLeftY = this.leftY[0] + Math.cos(this.bodyAngle[0]) * firstOffset;
-    ctx.moveTo(previousLeftX, previousLeftY);
-    for (let i = 1; i <= last; i += 1) {
-      const offset = this.tailVisualOffset(i);
-      const leftX = this.leftX[i] - Math.sin(this.bodyAngle[i]) * offset;
-      const leftY = this.leftY[i] + Math.cos(this.bodyAngle[i]) * offset;
-      ctx.quadraticCurveTo(previousLeftX, previousLeftY, (previousLeftX + leftX) * 0.5, (previousLeftY + leftY) * 0.5);
-      previousLeftX = leftX;
-      previousLeftY = leftY;
-    }
-    ctx.lineTo(previousLeftX, previousLeftY);
-
-    const lastOffset = this.tailVisualOffset(last);
-    let nextRightX = this.rightX[last] - Math.sin(this.bodyAngle[last]) * lastOffset;
-    let nextRightY = this.rightY[last] + Math.cos(this.bodyAngle[last]) * lastOffset;
-    for (let i = last - 1; i >= 0; i -= 1) {
-      const offset = this.tailVisualOffset(i);
-      const rightX = this.rightX[i] - Math.sin(this.bodyAngle[i]) * offset;
-      const rightY = this.rightY[i] + Math.cos(this.bodyAngle[i]) * offset;
-      ctx.quadraticCurveTo(nextRightX, nextRightY, (nextRightX + rightX) * 0.5, (nextRightY + rightY) * 0.5);
-      nextRightX = rightX;
-      nextRightY = rightY;
-    }
-    ctx.lineTo(nextRightX, nextRightY);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 1.05 * this.scale;
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  private tailVisualOffset(index: number) {
-    const tailStart = 120 * this.scale;
-    const tailEnd = (this.stationCount - 1) * this.bodySpacing;
-    const progress = Math.max(0, Math.min(1, (index * this.bodySpacing - tailStart) / Math.max(1, tailEnd - tailStart)));
-    return 6.2 * this.scale * Math.sin(Math.PI * progress);
-  }
-
-  private drawTailFin(ctx: CanvasRenderingContext2D, fill: string, edge: string, vein: string) {
-    const last = this.stationCount - 1;
-    const offset = Math.max(2, Math.round(18 * this.scale / this.bodySpacing));
-    const index = Math.max(0, last - offset);
-    const tailCurve = this.tailVisualOffset(index);
-
-    ctx.save();
-    ctx.translate(
-      this.bodyX[index] - Math.sin(this.bodyAngle[index]) * tailCurve,
-      this.bodyY[index] + Math.cos(this.bodyAngle[index]) * tailCurve,
-    );
-    ctx.rotate(this.bodyAngle[index]);
-    ctx.beginPath();
-    ctx.moveTo(5 * this.scale, 0);
-    ctx.quadraticCurveTo(0.8 * this.scale, -2.4 * this.scale, -4 * this.scale, -6.3 * this.scale);
-    ctx.lineTo(-7 * this.scale, -3.5 * this.scale);
-    ctx.lineTo(-17 * this.scale, 0);
-    ctx.lineTo(-7 * this.scale, 3.5 * this.scale);
-    ctx.lineTo(-4 * this.scale, 6.3 * this.scale);
-    ctx.quadraticCurveTo(0.8 * this.scale, 2.4 * this.scale, 5 * this.scale, 0);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 1.05 * this.scale;
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(3.2 * this.scale, 0);
-    ctx.quadraticCurveTo(-5 * this.scale, 0, -15.2 * this.scale, 0);
-    ctx.strokeStyle = vein;
-    ctx.lineWidth = 0.85 * this.scale;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  private drawWings(ctx: CanvasRenderingContext2D, fill: string, edge: string, vein: string) {
-    const index = Math.min(this.stationCount - 1, Math.round(59 * this.scale / this.bodySpacing));
-    for (let side = -1; side <= 1; side += 2) {
-      ctx.save();
-      ctx.translate(this.bodyX[index], this.bodyY[index]);
-      ctx.rotate(this.bodyAngle[index]);
-      ctx.scale(1, side);
-      ctx.beginPath();
-      ctx.moveTo(8 * this.scale, 4 * this.scale);
-      ctx.quadraticCurveTo(0.5 * this.scale, 6 * this.scale, -8 * this.scale, 15 * this.scale);
-      ctx.lineTo(-24 * this.scale, 30 * this.scale);
-      ctx.quadraticCurveTo(-34 * this.scale, 40 * this.scale, -43 * this.scale, 43 * this.scale);
-      ctx.quadraticCurveTo(-40 * this.scale, 34 * this.scale, -34 * this.scale, 28 * this.scale);
-      ctx.quadraticCurveTo(-31 * this.scale, 25 * this.scale, -27 * this.scale, 23 * this.scale);
-      ctx.quadraticCurveTo(-35 * this.scale, 20 * this.scale, -39 * this.scale, 18 * this.scale);
-      ctx.quadraticCurveTo(-36 * this.scale, 12 * this.scale, -27 * this.scale, 9 * this.scale);
-      ctx.quadraticCurveTo(-16 * this.scale, 4 * this.scale, -5 * this.scale, 3.2 * this.scale);
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = edge;
-      ctx.lineWidth = 1.25 * this.scale;
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(5 * this.scale, 4.5 * this.scale);
-      ctx.quadraticCurveTo(-16 * this.scale, 16 * this.scale, -42 * this.scale, 41 * this.scale);
-      ctx.moveTo(-2 * this.scale, 8 * this.scale);
-      ctx.quadraticCurveTo(-23 * this.scale, 17 * this.scale, -38 * this.scale, 18.5 * this.scale);
-      ctx.moveTo(-8 * this.scale, 14 * this.scale);
-      ctx.quadraticCurveTo(-23 * this.scale, 18 * this.scale, -32 * this.scale, 26 * this.scale);
-      ctx.strokeStyle = vein;
-      ctx.lineWidth = 1.05 * this.scale;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(6 * this.scale, 4.4 * this.scale);
-      ctx.quadraticCurveTo(-8 * this.scale, 12 * this.scale, -22 * this.scale, 29 * this.scale);
-      ctx.strokeStyle = edge;
-      ctx.lineWidth = 1.7 * this.scale;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  private drawLegs(ctx: CanvasRenderingContext2D, fill: string, edge: string, detail: string) {
-    const front = Math.min(this.stationCount - 1, Math.round(44 * this.scale / this.bodySpacing));
-    const rear = Math.min(this.stationCount - 1, Math.round(103 * this.scale / this.bodySpacing));
-
-    for (let leg = 0; leg < 4; leg += 1) {
-      const side = leg % 2 === 0 ? -1 : 1;
-      const index = leg < 2 ? front : rear;
-      const phase = this.travelPhase * 1.35 + (leg === 1 || leg === 2 ? Math.PI : 0);
-      const stride = Math.sin(phase) * 2.6 * this.scale * this.motionAmount;
-      const radius = this.bodyRadius[index];
-      const facing = leg < 2 ? 1 : -1;
-      const elbowX = facing * 1.8 * this.scale + stride * 0.38;
-      const footX = facing * 0.8 * this.scale + stride;
-
-      ctx.save();
-      ctx.translate(this.bodyX[index], this.bodyY[index]);
-      ctx.rotate(this.bodyAngle[index]);
-      const shoulderX = facing * 0.7 * this.scale;
-      const shoulderY = side * (radius - 1.5 * this.scale);
-      const elbowY = side * (radius + 3.8 * this.scale);
-      const footY = side * (radius + 7.5 * this.scale);
-      this.drawLimbSegment(ctx, shoulderX, shoulderY, elbowX, elbowY, 2.15 * this.scale, 1.65 * this.scale, fill, edge);
-      this.drawLimbSegment(ctx, elbowX, elbowY, footX, footY, 1.65 * this.scale, 1.15 * this.scale, fill, edge);
-
-      ctx.beginPath();
-      ctx.moveTo(footX - 2.4 * this.scale, side * (radius + 6.8 * this.scale));
-      ctx.lineTo(footX + 1.4 * this.scale, side * (radius + 6.9 * this.scale));
-      ctx.lineTo(footX + 3.2 * this.scale, side * (radius + 9.1 * this.scale));
-      ctx.lineTo(footX + 1 * this.scale, side * (radius + 8.7 * this.scale));
-      ctx.lineTo(footX - 0.6 * this.scale, side * (radius + 10.2 * this.scale));
-      ctx.lineTo(footX - 1.7 * this.scale, side * (radius + 8.8 * this.scale));
-      ctx.lineTo(footX - 3.1 * this.scale, side * (radius + 9.4 * this.scale));
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = detail;
-      ctx.lineWidth = 0.95 * this.scale;
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-
-  private drawLimbSegment(
-    ctx: CanvasRenderingContext2D,
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number,
-    startWidth: number,
-    endWidth: number,
-    fill: string,
-    edge: string,
-  ) {
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const length = Math.sqrt(dx * dx + dy * dy) || 1;
-    const normalX = -dy / length;
-    const normalY = dx / length;
-
-    ctx.beginPath();
-    ctx.moveTo(startX + normalX * startWidth, startY + normalY * startWidth);
-    ctx.lineTo(endX + normalX * endWidth, endY + normalY * endWidth);
-    ctx.lineTo(endX - normalX * endWidth, endY - normalY * endWidth);
-    ctx.lineTo(startX - normalX * startWidth, startY - normalY * startWidth);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 0.85 * this.scale;
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  private drawBodyLayers(ctx: CanvasRenderingContext2D, fill: string, shoulder: string, edge: string) {
-    const neck = Math.min(this.stationCount - 1, Math.round(31 * this.scale / this.bodySpacing));
-    const torso = Math.min(this.stationCount - 1, Math.round(120 * this.scale / this.bodySpacing));
-    this.drawBodyRibbon(ctx, neck, torso, 0.7, false, fill, edge);
-
-    const shoulderStart = Math.min(this.stationCount - 1, Math.round(37 * this.scale / this.bodySpacing));
-    const shoulderEnd = Math.min(this.stationCount - 1, Math.round(83 * this.scale / this.bodySpacing));
-    this.drawBodyRibbon(ctx, shoulderStart, shoulderEnd, 0.78, true, shoulder, edge);
-  }
-
-  private drawBodyRibbon(
-    ctx: CanvasRenderingContext2D,
-    start: number,
-    end: number,
-    widthFactor: number,
-    taperEnds: boolean,
-    fill: string,
-    edge: string,
-  ) {
-    const span = Math.max(1, end - start);
-    let previousLeftX = 0;
-    let previousLeftY = 0;
-    ctx.beginPath();
-
-    for (let i = start; i <= end; i += 1) {
-      const t = (i - start) / span;
-      const taper = taperEnds ? Math.pow(Math.sin(Math.PI * t), 0.35) : 1;
-      const width = this.bodyRadius[i] * widthFactor * taper;
-      const x = this.bodyX[i] - Math.sin(this.bodyAngle[i]) * width;
-      const y = this.bodyY[i] + Math.cos(this.bodyAngle[i]) * width;
-      if (i === start) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.quadraticCurveTo(previousLeftX, previousLeftY, (previousLeftX + x) * 0.5, (previousLeftY + y) * 0.5);
-      }
-      previousLeftX = x;
-      previousLeftY = y;
-    }
-    ctx.lineTo(previousLeftX, previousLeftY);
-
-    let nextRightX = 0;
-    let nextRightY = 0;
-    for (let i = end; i >= start; i -= 1) {
-      const t = (i - start) / span;
-      const taper = taperEnds ? Math.pow(Math.sin(Math.PI * t), 0.35) : 1;
-      const width = this.bodyRadius[i] * widthFactor * taper;
-      const x = this.bodyX[i] + Math.sin(this.bodyAngle[i]) * width;
-      const y = this.bodyY[i] - Math.cos(this.bodyAngle[i]) * width;
-      if (i === end) {
-        ctx.lineTo(x, y);
-      } else {
-        ctx.quadraticCurveTo(nextRightX, nextRightY, (nextRightX + x) * 0.5, (nextRightY + y) * 0.5);
-      }
-      nextRightX = x;
-      nextRightY = y;
-    }
-
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 0.7 * this.scale;
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  private drawHead(ctx: CanvasRenderingContext2D, fill: string, edge: string, detail: string) {
-    const size = 1.24 * this.scale;
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
-
-    // Swept horns sit behind the cranium and continue its angular silhouette.
-    for (let side = -1; side <= 1; side += 2) {
-      ctx.beginPath();
-      ctx.moveTo(-3.8 * size, side * 3.4 * size);
-      ctx.quadraticCurveTo(-8.2 * size, side * 5.4 * size, -13.2 * size, side * 10.2 * size);
-      ctx.lineTo(-10.5 * size, side * 4.1 * size);
-      ctx.quadraticCurveTo(-7 * size, side * 2.1 * size, -3.8 * size, side * 3.4 * size);
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = edge;
-      ctx.lineWidth = 0.95 * size;
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(16 * size, 0);
-    ctx.lineTo(11.8 * size, 1.25 * size);
-    ctx.lineTo(8.4 * size, 3.5 * size);
-    ctx.quadraticCurveTo(5.2 * size, 5.7 * size, 1 * size, 5.8 * size);
-    ctx.lineTo(-4.2 * size, 4.9 * size);
-    ctx.lineTo(-8.8 * size, 3 * size);
-    ctx.lineTo(-11.4 * size, 0);
-    ctx.lineTo(-8.8 * size, -3 * size);
-    ctx.lineTo(-4.2 * size, -4.9 * size);
-    ctx.quadraticCurveTo(5.2 * size, -5.7 * size, 8.4 * size, -3.5 * size);
-    ctx.lineTo(11.8 * size, -1.25 * size);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 1.2 * size;
-    ctx.fill();
-    ctx.stroke();
-
-    for (let side = -1; side <= 1; side += 2) {
-      ctx.beginPath();
-      ctx.moveTo(10.4 * size, side * 1.4 * size);
-      ctx.lineTo(6.2 * size, side * 3.2 * size);
-      ctx.lineTo(1.5 * size, side * 3.75 * size);
-      ctx.lineTo(4.2 * size, side * 2.25 * size);
-      ctx.closePath();
-      ctx.fillStyle = this.isDark ? 'rgba(55, 76, 99, 0.48)' : 'rgba(91, 117, 143, 0.34)';
-      ctx.fill();
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(10.8 * size, 1.4 * size);
-    ctx.lineTo(7 * size, 3.2 * size);
-    ctx.lineTo(1 * size, 4 * size);
-    ctx.quadraticCurveTo(4.2 * size, 5.2 * size, 7.6 * size, 4 * size);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(55, 76, 99, 0.55)';
-    ctx.fill();
-
-    for (let side = -1; side <= 1; side += 2) {
-      ctx.beginPath();
-      ctx.ellipse(3.7 * size, side * 3.15 * size, 1.05 * size, 0.68 * size, -side * 0.18, 0, Math.PI * 2);
-      ctx.fillStyle = detail;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(4 * size, side * 3.15 * size, 0.42 * size, 0.54 * size, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(5, 13, 24, 0.92)';
-      ctx.fill();
-    }
-
-    ctx.beginPath();
-    ctx.ellipse(13.5 * size, -0.9 * size, 0.55 * size, 0.32 * size, 0, 0, Math.PI * 2);
-    ctx.ellipse(13.5 * size, 0.9 * size, 0.55 * size, 0.32 * size, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(5, 13, 24, 0.9)';
-    ctx.fill();
-
-    ctx.restore();
   }
 
   private intersectsRect(x1: number, y1: number, x2: number, y2: number, rect: Rect) {

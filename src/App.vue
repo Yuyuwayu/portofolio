@@ -1,5 +1,5 @@
 <script setup>
-import { ref, shallowRef, onMounted, computed, watchEffect, watch } from 'vue';
+import { ref, shallowRef, onMounted, onBeforeUnmount, computed, watchEffect, watch } from 'vue';
 import { tsParticles } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
 import { Github, Linkedin, Twitter, ExternalLink, Heart, Sun, Moon } from 'lucide-vue-next';
@@ -9,6 +9,11 @@ const particlesContainer = ref(null);
 const particleSystem = shallowRef(null);
 const heroCopy = ref(null);
 const isDarkMode = ref(true);
+const prefersReducedMotion = ref(false);
+let reducedMotionQuery = null;
+const updateReducedMotionPreference = ({ matches }) => {
+  prefersReducedMotion.value = matches;
+};
 
 watchEffect(() => {
   if (typeof window !== 'undefined') {
@@ -82,7 +87,68 @@ const socialLinks = ref([
   { name: 'LinkedIn', component: Linkedin, url: 'https://www.linkedin.com/in/nanda-willy-atmaja-6b916333b/' }
 ]);
 
+const constellationAnchors = [
+  // A small northern cluster, kept away from the hero copy.
+  ['north', 8, 8, 1.6],
+  ['north', 12, 17, 1.9],
+  ['north', 17, 25, 1.5],
+  ['north', 21, 34, 1.3],
+  // A counterweight in the upper-right keeps the field from feeling uniform.
+  ['east', 76, 10, 1.4],
+  ['east', 80, 19, 2.0],
+  ['east', 85, 27, 1.5],
+  ['east', 89, 36, 1.3],
+  // A longer, quieter chain that only hints at a dragon when noticed.
+  ['serpent', 55, 62, 1.2],
+  ['serpent', 60, 70, 1.8],
+  ['serpent', 65, 77, 1.4],
+  ['serpent', 70, 85, 1.9],
+  ['serpent', 77, 84, 1.3],
+];
+
+const compactConstellationAnchors = [
+  ['north', 10, 10, 1.5],
+  ['north', 15, 20, 1.8],
+  ['north', 21, 30, 1.4],
+  ['east', 77, 12, 1.4],
+  ['east', 82, 22, 1.8],
+  ['east', 88, 31, 1.4],
+  ['serpent', 60, 68, 1.3],
+  ['serpent', 66, 76, 1.8],
+  ['serpent', 72, 84, 1.3],
+];
+
+const constellationStars = (anchors, dark, motionEnabled, linkDistance) => {
+  const starColor = dark ? '#a9c2d4' : '#5c7895';
+  const lineColor = dark ? '#6e96b3' : '#6887a3';
+
+  return anchors.map(([constellation, x, y, size]) => ({
+    position: { x, y, mode: 'percent' },
+    options: {
+      color: { value: starColor },
+      move: { enable: false },
+      opacity: {
+        value: { min: 0.42, max: 0.72 },
+        animation: { enable: motionEnabled, speed: 0.08, sync: false },
+      },
+      size: { value: size },
+      links: {
+        color: lineColor,
+        distance: linkDistance,
+        enable: true,
+        id: `constellation-${constellation}`,
+        opacity: 0.18,
+        triangles: { enable: false },
+        width: 0.55,
+      },
+    },
+  }));
+};
+
 const particleOptions = computed(() => ({
+  // Most stars are deliberately unlinked. Only the fixed anchors below form
+  // the handful of faint, stable constellation strokes.
+  manualParticles: constellationStars(constellationAnchors, isDarkMode.value, !prefersReducedMotion.value, 170),
   background: {
     color: {
       value: isDarkMode.value ? '#020617' : '#f8fafc'
@@ -97,36 +163,64 @@ const particleOptions = computed(() => ({
     },
     modes: {
       push: { quantity: 4 },
-      grab: { distance: 140, line_linked: { opacity: 0.5 } }
+      grab: {
+        distance: 86,
+        links: {
+          color: isDarkMode.value ? '#7397b1' : '#66829d',
+          opacity: 0.11,
+        },
+      },
     }
   },
   particles: {
     color: {
-      value: isDarkMode.value ? '#4f46e5' : '#4338ca'
+      value: isDarkMode.value
+        ? ['#6f8fa8', '#8ca9bd', '#b1c5d2']
+        : ['#7188a0', '#58738f', '#849bae']
     },
     links: {
-      color: isDarkMode.value ? '#38bdf8' : '#2563eb',
-      distance: 150,
-      enable: true,
-      opacity: 0.2,
-      width: 1
+      enable: false,
     },
     move: {
       direction: 'none',
-      enable: true,
-      outModes: { default: 'bounce' },
+      enable: !prefersReducedMotion.value,
+      outModes: { default: 'out' },
       random: true,
-      speed: 1,
+      speed: 0.08,
       straight: false
     },
     number: {
-      density: { enable: true, area: 800 },
-      value: 60
+      density: { enable: false },
+      value: 44
     },
-    opacity: { value: 0.5 },
+    opacity: {
+      value: { min: 0.16, max: 0.52 },
+      animation: { enable: !prefersReducedMotion.value, speed: 0.12, sync: false },
+    },
     shape: { type: 'circle' },
-    size: { value: { min: 1, max: 5 } }
+    size: { value: { min: 0.65, max: 1.75 } }
   },
+  responsive: [
+    {
+      maxWidth: 960,
+      mode: 'screen',
+      options: {
+        manualParticles: constellationStars(compactConstellationAnchors, isDarkMode.value, !prefersReducedMotion.value, 120),
+        particles: { number: { value: 30 } },
+      },
+    },
+    {
+      maxWidth: 639,
+      mode: 'screen',
+      options: {
+        manualParticles: [],
+        particles: {
+          move: { enable: false },
+          number: { value: 22 },
+        },
+      },
+    },
+  ],
   detectRetina: true
 }));
 
@@ -154,6 +248,9 @@ watch(particleOptions, (newOptions) => {
 onMounted(async () => {
   const savedTheme = localStorage.getItem('isDarkMode');
   isDarkMode.value = savedTheme !== null ? JSON.parse(savedTheme) : true;
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  prefersReducedMotion.value = reducedMotionQuery.matches;
+  reducedMotionQuery.addEventListener('change', updateReducedMotionPreference);
 
   await loadSlim(tsParticles);
   await loadParticles(particleOptions.value);
@@ -169,6 +266,10 @@ onMounted(async () => {
   document.querySelectorAll('.scroll-target').forEach(el => {
     observer.observe(el);
   });
+});
+
+onBeforeUnmount(() => {
+  reducedMotionQuery?.removeEventListener('change', updateReducedMotionPreference);
 });
 
 </script>

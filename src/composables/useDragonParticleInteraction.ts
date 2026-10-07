@@ -99,7 +99,6 @@ export class DragonParticleInteraction {
     const network = container as NetworkContainer;
     const pixelRatio = Math.max(1, container.retina.pixelRatio || 1);
     let changed = this.updateConsuming(network, frame, now, pixelRatio);
-    changed = this.updateBrokenEdges(now) || changed;
 
     if (frame.hasMoved && network.particles.count > 0) {
       this.frameNumber += 1;
@@ -181,6 +180,10 @@ export class DragonParticleInteraction {
       }
     }
 
+    // Retire an edge only after this pass has had the chance to confirm that
+    // the dragon is no longer touching it. This keeps a slow or stationary
+    // overlap from repeatedly starting the same break animation.
+    changed = this.updateBrokenEdges(now) || changed;
     return changed;
   }
 
@@ -188,7 +191,7 @@ export class DragonParticleInteraction {
     if (!this.brokenEdges.size || !this.container || this.container.destroyed) return;
     const pixelRatio = Math.max(1, this.container.retina.pixelRatio || 1);
     const background = dark ? '#020617' : '#f8fafc';
-    const line = dark ? '#38bdf8' : '#2563eb';
+    const line = dark ? '#6e96b3' : '#6887a3';
 
     for (const edgesFromSource of this.brokenEdges.values()) {
       for (const edge of edgesFromSource.values()) {
@@ -456,11 +459,11 @@ export class DragonParticleInteraction {
     let changed = false;
     for (const [sourceId, edgesFromSource] of this.brokenEdges) {
       for (const [destinationId, edge] of edgesFromSource) {
-      if (edge.lastSeenFrame !== this.frameNumber) edge.contactActive = false;
-      if (edge.source.destroyed || edge.destination.destroyed || (!edge.contactActive && now - edge.startedAt >= BREAK_DURATION)) {
-        edgesFromSource.delete(destinationId);
-        changed = true;
-      }
+        edge.contactActive = edge.lastSeenFrame === this.frameNumber;
+        if (edge.source.destroyed || edge.destination.destroyed || (!edge.contactActive && now - edge.startedAt >= BREAK_DURATION)) {
+          edgesFromSource.delete(destinationId);
+          changed = true;
+        }
       }
       if (edgesFromSource.size === 0) this.brokenEdges.delete(sourceId);
     }

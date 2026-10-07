@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procedural Dragon Geometry Preview</title>
+    <style>
+      :root { background: #071326; color: #cfeaff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; }
+      main { width: min(1040px, calc(100vw - 32px)); }
+      h1 { font-size: 16px; font-weight: 600; letter-spacing: .08em; margin: 0 0 8px; }
+      p { color: #83add4; font-size: 13px; margin: 0 0 16px; }
+      canvas { width: 1040px; height: 720px; min-height: 560px; display: block; border: 1px solid #244b73; background: radial-gradient(circle at 50% 30%, #10294a, #071326 72%); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>PROCEDURAL DRAGON — CONTOUR VALIDATION</h1>
+      <p>Static spine poses: inspect silhouette continuity, shoulder mass, wing roots, head collar, and tail taper.</p>
+      <canvas id="preview" width="1040" height="720" aria-label="Seven static procedural dragon geometry poses"></canvas>
+    </main>
+    <script type="module">
+      import { drawDragonGeometryPreview } from '/src/composables/dragonProceduralRenderer.ts';
+
+      const canvas = document.querySelector('#preview');
+      // Immediate draw for headless; ResizeObserver for interactive use.
+      drawDragonGeometryPreview(canvas);
+      new ResizeObserver(() => drawDragonGeometryPreview(canvas)).observe(canvas);
+    </script>
+  </body>
+</html>
