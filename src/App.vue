@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted, computed, watchEffect, watch } from 'vue';
+import { ref, shallowRef, onMounted, computed, watchEffect, watch } from 'vue';
 import { tsParticles } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
 import { Github, Linkedin, Twitter, ExternalLink, Heart, Sun, Moon } from 'lucide-vue-next';
 import DragonCanvas from './components/DragonCanvas.vue';
 
 const particlesContainer = ref(null);
+const particleSystem = shallowRef(null);
 const heroCopy = ref(null);
 const isDarkMode = ref(true);
 
@@ -129,13 +130,13 @@ const particleOptions = computed(() => ({
   detectRetina: true
 }));
 
-const loadParticles = (options) => {
+const loadParticles = async (options) => {
   if (particlesContainer.value) {
-    tsParticles.load({
+    particleSystem.value = await tsParticles.load({
       id: 'tsparticles',
       element: particlesContainer.value,
       options: options,
-    });
+    }) ?? null;
   }
 };
 
@@ -147,7 +148,7 @@ const scrollTo = (selector) => {
 };
 
 watch(particleOptions, (newOptions) => {
-  loadParticles(newOptions);
+  void loadParticles(newOptions);
 });
 
 onMounted(async () => {
@@ -155,7 +156,7 @@ onMounted(async () => {
   isDarkMode.value = savedTheme !== null ? JSON.parse(savedTheme) : true;
 
   await loadSlim(tsParticles);
-  loadParticles(particleOptions.value);
+  await loadParticles(particleOptions.value);
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -174,6 +175,7 @@ onMounted(async () => {
 
 <template>
   <div ref="particlesContainer" id="tsparticles" class="fixed w-full h-full top-0 left-0 -z-10"></div>
+  <DragonCanvas :dark="isDarkMode" :safe-zone="heroCopy" :particle-system="particleSystem" />
 
   <div class="relative z-10 text-secondary">
     <main class="container mx-auto px-6 py-12 md:py-20">
@@ -186,7 +188,6 @@ onMounted(async () => {
       </div>
 
       <section id="home" class="relative isolate min-h-[80vh] flex items-center scroll-target">
-        <DragonCanvas :dark="isDarkMode" :safe-zone="heroCopy" />
         <div ref="heroCopy" class="relative z-10 max-w-3xl">
           <div class="text-2xl font-bold text-primary tracking-wider mb-8">
             {{ personalInfo.nama.split(' ')[0] }}<span class="text-accent">.</span>
