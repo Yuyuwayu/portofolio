@@ -2,8 +2,15 @@
 import { ref, shallowRef, onMounted, onBeforeUnmount, computed, watchEffect, watch } from 'vue';
 import { tsParticles } from '@tsparticles/engine';
 import { loadSlim } from '@tsparticles/slim';
-import { Github, Linkedin, Twitter, ExternalLink, Heart, Sun, Moon } from 'lucide-vue-next';
+import { Github, Linkedin, Sun, Moon, Globe, Heart } from 'lucide-vue-next';
 import DragonCanvas from './components/DragonCanvas.vue';
+import ProjectCard from './components/ProjectCard.vue';
+import { useLanguage } from './composables/useLanguage';
+import { translations, personalInfo } from './data/translations';
+import { projects } from './data/projects';
+import { skills } from './data/skills';
+
+const { currentLanguage, toggleLanguage } = useLanguage();
 
 const particlesContainer = ref(null);
 const particleSystem = shallowRef(null);
@@ -11,6 +18,7 @@ const heroCopy = ref(null);
 const isDarkMode = ref(true);
 const prefersReducedMotion = ref(false);
 let reducedMotionQuery = null;
+
 const updateReducedMotionPreference = ({ matches }) => {
   prefersReducedMotion.value = matches;
 };
@@ -26,66 +34,10 @@ watchEffect(() => {
   }
 });
 
-const personalInfo = ref({
-  nama: 'Nanda Willy Atmaja',
-  jabatan: 'Junior Web Developer',
-  sapaan: 'Halo, saya',
-  bio: 'Seorang mahasiswa dari Universitas Negeri Semarang yang bersemangat dalam dunia pengembangan web. Saya memiliki minat kuat pada pengembangan back-end dan front-end, dan selalu antusias untuk belajar teknologi baru serta berkontribusi dalam proyek-proyek yang menantang.',
-  email: 'Justturtle30@students.unnes.ac.id',
-  cvUrl: 'https://drive.google.com/file/d/1LbcVmTRIcsnJLWUIXpECe6zi2pdWYbG3/view?usp=drive_link'
-});
-
-const projects = ref([
-  {
-    title: 'MyShuttle UNNES',
-    description: 'Full-stack campus shuttle monitoring system for tracking shuttle routes, shuttle locations, nearby stops, and passenger occupancy. Laravel powers the full application, while Python runs a custom-trained YOLOv8n model for passenger detection.',
-    imageUrl: '/myshuttle-unnes.webp',
-    technologies: ['Laravel', 'Python', 'YOLOv8n', 'Leaflet']
-  },
-  {
-    title: 'Web Profil Desa',
-    description: 'Membuat Template Web Profil Desa dengan data dummy menggunakan Vue 3 dan Tailwind.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Web+Profil+Desa',
-    technologies: ['Vue 3', 'Tailwind'],
-    sourceUrl: 'https://github.com/Yuyuwayu/selokarto'
-  },
-  {
-    title: 'Deteksi Ikan',
-    description: 'Membuat Prototipe Model Yolo untuk mendeteksi Ikan.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Deteksi+Ikan',
-    technologies: ['Python', 'FastApi', 'Yolo'],
-    sourceUrl: 'https://github.com/Yuyuwayu/capstone-yolo'
-  },
-  {
-    title: 'Analisis Segmentasi Pelanggan dengan Clustering dan Klasifikasi',
-    description: 'Melakukan segmentasi pelanggan menggunakan K-Means Clustering, menghasilkan 4 segmen.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Clustering+dan+Klasifikasi',
-    technologies: ['Python'],
-    sourceUrl: 'https://github.com/Yuyuwayu/machine-learning'
-  },
-  {
-    title: 'Desain Landing Page',
-    description: 'Mendesain dan membangun landing page yang menarik dan responsif dari awal menggunakan HTML dan CSS murni.',
-    imageUrl: 'https://placehold.co/600x400/020617/94a3b8?text=Landing+Page',
-    technologies: ['HTML', 'CSS', 'Responsive Design'],
-    sourceUrl: 'https://github.com/Yuyuwayu/Belajar'
-  }
-]);
-
-const skills = ref([
-  { name: 'HTML & CSS', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
-  { name: 'JavaScript', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg' },
-  { name: 'Vue.js', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg' },
-  { name: 'Python', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg' },
-  { name: 'CodeIgniter', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/codeigniter/codeigniter-plain.svg' },
-  { name: 'FastAPI', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastapi/fastapi-original.svg' },
-  { name: 'Git', iconUrl: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg' }
-]);
-
-const socialLinks = ref([
+const socialLinks = [
   { name: 'GitHub', component: Github, url: 'https://github.com/Yuyuwayu' },
   { name: 'LinkedIn', component: Linkedin, url: 'https://www.linkedin.com/in/nanda-willy-atmaja-6b916333b/' }
-]);
+];
 
 const constellationAnchors = [
   // A small northern cluster, kept away from the hero copy.
@@ -146,8 +98,6 @@ const constellationStars = (anchors, dark, motionEnabled, linkDistance) => {
 };
 
 const particleOptions = computed(() => ({
-  // Most stars are deliberately unlinked. Only the fixed anchors below form
-  // the handful of faint, stable constellation strokes.
   manualParticles: constellationStars(constellationAnchors, isDarkMode.value, !prefersReducedMotion.value, 170),
   background: {
     color: {
@@ -271,7 +221,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   reducedMotionQuery?.removeEventListener('change', updateReducedMotionPreference);
 });
-
 </script>
 
 <template>
@@ -279,96 +228,189 @@ onBeforeUnmount(() => {
   <DragonCanvas :dark="isDarkMode" :safe-zone="heroCopy" :particle-system="particleSystem" />
 
   <div class="relative z-10 text-secondary">
-    <main class="container mx-auto px-6 py-12 md:py-20">
+    <!-- Utility Controls: Language Switcher directly beside Theme Toggle -->
+    <div class="fixed top-6 right-6 z-30 flex items-center gap-2">
+      <!-- Language Switcher -->
+      <button
+        @click="toggleLanguage"
+        :aria-label="translations.nav.switchLanguage[currentLanguage]"
+        class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-surface/80 backdrop-blur-sm transition-colors duration-300 border border-card-border hover:border-accent text-secondary hover:text-primary text-xs font-semibold shadow-sm"
+      >
+        <Globe class="w-4 h-4 text-accent" />
+        <span class="uppercase tracking-wider font-bold">{{ currentLanguage }}</span>
+      </button>
 
-      <div class="absolute top-6 right-6 z-20">
-        <button @click="isDarkMode = !isDarkMode" class="p-2 rounded-full bg-surface/80 backdrop-blur-sm transition-colors duration-300 border border-card-border">
-          <Sun v-if="isDarkMode" class="w-6 h-6 text-yellow-500" />
-          <Moon v-else class="w-6 h-6 text-indigo-700" />
-        </button>
-      </div>
+      <!-- Theme Toggle (preserving original design and scale) -->
+      <button
+        @click="isDarkMode = !isDarkMode"
+        :aria-label="isDarkMode ? translations.nav.themeDark[currentLanguage] : translations.nav.themeLight[currentLanguage]"
+        class="p-2 rounded-full bg-surface/80 backdrop-blur-sm transition-colors duration-300 border border-card-border hover:border-accent text-secondary hover:text-primary shadow-sm"
+      >
+        <Sun v-if="isDarkMode" class="w-6 h-6 text-yellow-500" />
+        <Moon v-else class="w-6 h-6 text-indigo-700" />
+      </button>
+    </div>
 
-      <section id="home" class="relative isolate min-h-[80vh] flex items-center scroll-target">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+      <!-- Hero Section -->
+      <section id="home" class="relative isolate min-h-[82vh] flex items-center py-12 md:py-20 scroll-target">
         <div ref="heroCopy" class="relative z-10 max-w-3xl">
-          <div class="text-2xl font-bold text-primary tracking-wider mb-8">
+          <div class="text-2xl font-bold text-primary tracking-wider mb-6 sm:mb-8">
             {{ personalInfo.nama.split(' ')[0] }}<span class="text-accent">.</span>
           </div>
-          <h2 class="text-accent font-semibold text-lg tracking-wide">{{ personalInfo.sapaan }}</h2>
-          <h1 class="text-4xl md:text-6xl font-bold text-primary mt-2">{{ personalInfo.nama }}</h1>
-          <h3 class="text-2xl md:text-4xl font-semibold text-secondary mt-3">{{ personalInfo.jabatan }}</h3>
-          <p class="mt-6 text-lg text-secondary max-w-xl">
-            {{ personalInfo.bio }}
+          <h2 class="text-accent font-semibold text-base sm:text-lg tracking-wide">{{ translations.hero.greeting[currentLanguage] }}</h2>
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-primary mt-2 tracking-tight">{{ personalInfo.nama }}</h1>
+          <h3 class="text-xl sm:text-2xl md:text-3xl font-semibold text-secondary mt-2.5 sm:mt-3">{{ translations.hero.role[currentLanguage] }}</h3>
+          <p class="mt-5 text-base sm:text-lg text-secondary max-w-2xl leading-relaxed">
+            {{ translations.hero.bio[currentLanguage] }}
           </p>
-          <div class="mt-8 flex gap-4">
-            <a href="#projects" @click.prevent="scrollTo('#projects')" class="bg-primary text-background hover:opacity-90 font-semibold px-8 py-3 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 border border-accent">Lihat Proyek Saya</a>
-            <a :href="personalInfo.cvUrl" target="_blank" class="bg-transparent border border-accent text-accent hover:bg-accent hover:text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-all duration-300">Unduh CV</a>
+          <div class="mt-8 flex flex-wrap gap-4">
+            <a
+              href="#projects"
+              @click.prevent="scrollTo('#projects')"
+              class="bg-primary text-background hover:opacity-90 font-semibold px-6 sm:px-8 py-3 rounded-lg shadow-md transition-all duration-300 transform hover:scale-[1.02] border border-accent text-sm sm:text-base inline-flex items-center justify-center"
+            >
+              {{ translations.hero.viewProjects[currentLanguage] }}
+            </a>
+            <a
+              :href="personalInfo.cvUrl"
+              target="_blank"
+              class="bg-transparent border border-accent text-accent hover:bg-accent hover:text-white font-semibold px-6 sm:px-8 py-3 rounded-lg shadow-md transition-all duration-300 text-sm sm:text-base inline-flex items-center justify-center"
+            >
+              {{ translations.hero.downloadCv[currentLanguage] }}
+            </a>
           </div>
         </div>
       </section>
 
-      <section id="projects" class="py-20 scroll-target">
-        <h2 class="text-3xl md:text-4xl font-bold text-primary text-center">
-          <span class="text-accent">Proyek</span> yang Pernah Saya Buat
-        </h2>
-        <p class="text-center text-secondary mt-4 max-w-2xl mx-auto">Berikut adalah beberapa proyek pilihan yang menunjukkan keahlian dan minat saya.</p>
-        <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div v-for="project in projects" :key="project.title" class="bg-surface backdrop-blur-xl border border-card-border rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-all duration-300 group flex flex-col">
-            <img :src="project.imageUrl" :alt="'Gambar ' + project.title" class="w-full h-48 object-cover group-hover:opacity-90 transition-opacity duration-300">
-            <div class="p-6 flex flex-col flex-grow">
-              <div class="flex-grow">
-                <h3 class="text-xl font-bold text-primary">{{ project.title }}</h3>
-                <p class="text-secondary mt-2 text-sm">{{ project.description }}</p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                  <span v-for="tech in project.technologies" class="bg-chip-bg text-chip-text text-xs font-semibold px-2.5 py-1 rounded-full">{{ tech }}</span>
-                </div>
-              </div>
-              <div v-if="project.sourceUrl" class="mt-auto pt-6 flex justify-end gap-4">
-                <a :href="project.sourceUrl" target="_blank" class="text-secondary hover:text-accent transition-colors duration-300 flex items-center gap-2">
-                  <Github class="w-4 h-4" /> Kode
-                </a>
-              </div>
+      <!-- Projects Section (Masonry Wall) -->
+      <section id="projects" class="py-20 md:py-28 scroll-target relative">
+        <!-- Subtle ambient star points -->
+        <div class="pointer-events-none absolute top-10 right-8 w-1.5 h-1.5 rounded-full bg-slate-300/20 blur-[0.5px] hidden sm:block"></div>
+        <div class="pointer-events-none absolute bottom-12 left-6 w-1 h-1 rounded-full bg-slate-300/20 blur-[0.5px] hidden sm:block"></div>
+
+        <div class="text-center">
+          <h2 class="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+            <span class="text-accent">{{ translations.projects.titlePrefix[currentLanguage] }}</span>{{ translations.projects.titleSuffix[currentLanguage] }}
+          </h2>
+          <p class="text-secondary mt-3 max-w-2xl mx-auto text-base">
+            {{ translations.projects.subtitle[currentLanguage] }}
+          </p>
+        </div>
+
+        <!-- Pinterest-Inspired Masonry Project Wall -->
+        <div class="mt-12 md:mt-16">
+          <!-- Desktop Layout (3 Columns): lg and above -->
+          <div class="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
+            <!-- Column 1: Flagship Landscape (MyShuttle) + Secondary Landscape (Presensi) -->
+            <div class="flex flex-col gap-6">
+              <ProjectCard :project="projects[0]" :is-flagship="true" />
+              <ProjectCard :project="projects[3]" />
+            </div>
+
+            <!-- Column 2: Tall Portrait Showcase (Doremi) -->
+            <div class="flex flex-col gap-6">
+              <ProjectCard :project="projects[1]" />
+            </div>
+
+            <!-- Column 3: Horizontal Tool (Webnovel Scraper) + Offset Tall Portrait Showcase (WhatsApp Bot) -->
+            <div class="flex flex-col gap-6">
+              <ProjectCard :project="projects[4]" />
+              <ProjectCard :project="projects[2]" />
             </div>
           </div>
-        </div>
-      </section>
 
-      <section id="skills" class="py-20 scroll-target">
-        <h2 class="text-3xl md:text-4xl font-bold text-primary text-center">
-          <span class="text-accent">Keterampilan</span> & Teknologi
-        </h2>
-        <p class="text-center text-secondary mt-4 max-w-2xl mx-auto">Saya memiliki pengalaman dengan berbagai teknologi modern.</p>
-        <div class="mt-12 max-w-4xl mx-auto flex flex-wrap justify-center gap-6 md:gap-8">
-          <div v-for="skill in skills" :key="skill.name" class="flex flex-col items-center gap-3 p-4 bg-surface backdrop-blur-xl border border-card-border rounded-xl w-28 h-28 justify-center transition-all duration-300 transform hover:scale-110">
-            <img :src="skill.iconUrl" :alt="skill.name" class="w-10 h-10">
-            <span class="text-primary font-medium text-sm text-center">{{ skill.name }}</span>
+          <!-- Tablet Layout (2 Columns): md to lg -->
+          <div class="hidden md:grid lg:hidden md:grid-cols-2 gap-6 items-start">
+            <!-- Column 1: Landscape (MyShuttle) + Portrait (WhatsApp Bot) -->
+            <div class="flex flex-col gap-6">
+              <ProjectCard :project="projects[0]" :is-flagship="true" />
+              <ProjectCard :project="projects[2]" />
+            </div>
+
+            <!-- Column 2: Portrait (Doremi) + Landscape (Presensi) + Landscape (Webnovel Scraper) -->
+            <div class="flex flex-col gap-6">
+              <ProjectCard :project="projects[1]" />
+              <ProjectCard :project="projects[3]" />
+              <ProjectCard :project="projects[4]" />
+            </div>
+          </div>
+
+          <!-- Mobile Layout (1 Column): below md -->
+          <div class="flex flex-col md:hidden gap-6">
+            <ProjectCard
+              v-for="(project, index) in projects"
+              :key="project.title"
+              :project="project"
+              :is-flagship="index === 0"
+            />
           </div>
         </div>
       </section>
 
-      <section id="contact" class="py-20 text-center scroll-target">
-        <h2 class="text-3xl md:text-4xl font-bold text-primary">
-          Mari Terhubung!
-        </h2>
-        <p class="text-secondary mt-4 max-w-xl mx-auto">
-          Saya selalu terbuka untuk diskusi, kolaborasi, atau peluang baru.
-        </p>
-        <div class="mt-8">
-          <a :href="'mailto:' + personalInfo.email" class="inline-block bg-primary text-background hover:opacity-90 text-lg font-semibold px-10 py-4 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 border border-accent">
-            Hubungi Saya
-          </a>
+      <!-- Skills Section -->
+      <section id="skills" class="py-20 md:py-28 scroll-target">
+        <div class="text-center">
+          <h2 class="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+            <span class="text-accent">{{ translations.skills.titlePrefix[currentLanguage] }}</span>{{ translations.skills.titleSuffix[currentLanguage] }}
+          </h2>
+          <p class="text-secondary mt-3 max-w-2xl mx-auto text-base">
+            {{ translations.skills.subtitle[currentLanguage] }}
+          </p>
         </div>
-        <div class="mt-10 flex justify-center gap-8">
-          <a v-for="social in socialLinks" :key="social.name" :href="social.url" target="_blank" class="text-secondary hover:text-accent transition-colors duration-300">
-            <component :is="social.component" class="w-8 h-8" />
-          </a>
+
+        <div class="mt-12 max-w-4xl mx-auto flex flex-wrap justify-center gap-6 md:gap-8">
+          <div
+            v-for="skill in skills"
+            :key="skill.name"
+            class="flex flex-col items-center gap-3 p-4 bg-surface backdrop-blur-xl border border-card-border rounded-xl w-28 h-28 justify-center transition-all duration-300 transform hover:scale-110 shadow-sm"
+          >
+            <img :src="skill.iconUrl" :alt="skill.name" class="w-10 h-10 object-contain">
+            <span class="text-primary font-medium text-sm text-center leading-tight">{{ skill.name }}</span>
+          </div>
         </div>
       </section>
 
+      <!-- Contact Section -->
+      <section id="contact" class="py-20 md:py-28 text-center scroll-target">
+        <h2 class="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+          {{ translations.contact.title[currentLanguage] }}
+        </h2>
+        <p class="text-secondary mt-3 max-w-xl mx-auto text-base">
+          {{ translations.contact.subtitle[currentLanguage] }}
+        </p>
+        <div class="mt-8">
+          <a
+            :href="'mailto:' + personalInfo.email"
+            class="inline-block bg-primary text-background hover:opacity-90 text-base sm:text-lg font-semibold px-8 sm:px-10 py-3.5 sm:py-4 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 border border-accent"
+          >
+            {{ translations.contact.button[currentLanguage] }}
+          </a>
+        </div>
+        <div class="mt-8 flex justify-center gap-6 sm:gap-8">
+          <a
+            v-for="social in socialLinks"
+            :key="social.name"
+            :href="social.url"
+            target="_blank"
+            :aria-label="social.name"
+            class="text-secondary hover:text-accent transition-colors duration-300 p-2 rounded-lg hover:bg-slate-800/10 dark:hover:bg-slate-700/20"
+          >
+            <component :is="social.component" class="w-6 h-6" />
+          </a>
+        </div>
+      </section>
     </main>
 
-    <footer class="border-t border-card-border">
-      <div class="container mx-auto px-6 py-6 text-center text-slate-500">
-        <p>&copy; {{ new Date().getFullYear() }} {{ personalInfo.nama }}. Dibuat dengan <Heart class="inline-block w-4 h-4 text-red-500 fill-current" /> menggunakan Vue.js.</p>
+    <!-- Footer -->
+    <footer class="border-t border-card-border/60 py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-secondary">
+        <p>
+          &copy; {{ new Date().getFullYear() }} {{ personalInfo.nama }}.
+          {{ translations.footer.builtWith[currentLanguage] }}
+          <Heart class="inline-block w-4 h-4 text-red-500 fill-current mx-0.5 align-text-bottom" />
+          {{ translations.footer.usingVue[currentLanguage] }}
+        </p>
       </div>
     </footer>
   </div>

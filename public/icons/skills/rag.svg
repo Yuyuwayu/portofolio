@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Knowledge document -->
+  <path d="M4 19V5a2 2 0 0 1 2-2h6l4 4v2"/>
+  <path d="M12 3v4h4"/>
+  <path d="M7 7h2"/>
+  <!-- Retrieval search magnifier -->
+  <circle cx="8" cy="15" r="3"/>
+  <path d="m10.3 17.3 2.7 2.7"/>
+  <!-- AI Generation Sparkle (✦) -->
+  <path d="M18.5 10c0 2 1.5 3 1.5 3s-1.5 1-1.5 3c0-2-1.5-3-1.5-3s1.5-1 1.5-3Z" fill="#38bdf8"/>
+  <!-- Augmentation vector connecting retrieved context to generation -->
+  <path d="M15 17h1.5a2.5 2.5 0 0 0 2.5-2.5V16" stroke-dasharray="1.5 1.5"/>
+</svg>
